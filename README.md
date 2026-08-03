@@ -42,7 +42,7 @@ The system improves retrieval quality through a sequence of retrieval and rankin
 # Architecture
 
 <p align="center">
-<img src="images/agent.png" width="700">
+<img src="images/multimodal.png" width="700">
 </p>
 
 ---
