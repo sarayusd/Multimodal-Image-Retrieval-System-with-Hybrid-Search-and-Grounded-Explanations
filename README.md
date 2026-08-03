@@ -1,46 +1,128 @@
-# Multimodal Retrieval and Ranking System with LLM Verification
+# Multimodal Image Retrieval System with Hybrid Search and Grounded Explanations
 
-A multimodal retrieval and reasoning system supporting **text→image, image→image, and image→caption search** using vision-language embeddings and large language models. Images and captions from the **COCO 2017 dataset** are encoded using **OpenCLIP (ViT-L-14)** and indexed in a **ChromaDB vector database** for persistent similarity search.
+A multimodal retrieval system that supports **text-to-image**, **image-to-image**, and **image-to-caption** search using vision-language embeddings. The system combines semantic retrieval, lexical retrieval, cross-encoder reranking, LLM-based image verification, and grounded generation to improve retrieval quality and produce evidence-backed scene explanations.
 
-The system combines **dense CLIP retrieval, BM25 lexical retrieval, SentenceTransformers cross-encoder reranking, GPT-4o-mini vision-based verification, and few-shot RAG prompting** to improve retrieval robustness and generate grounded scene explanations from retrieved evidence.
-
----
-
-## Key Features
-
-- **Multimodal Embedding Space:** Uses **OpenCLIP (ViT-L-14)** to encode images and captions from the **COCO 2017 dataset** into a shared embedding space. Embeddings are cached as numpy arrays on disk for efficient startup.
-- **Vector Database Search:** Indexes image embeddings in **ChromaDB** for persistent multimodal similarity search across sessions.
-- **Multi-Stage Retrieval Pipeline:** Combines **dense CLIP vector retrieval, BM25 lexical retrieval, and SentenceTransformers cross-encoder reranking** with hybrid score fusion (0.7 dense + 0.3 BM25) to improve retrieval quality.
-- **Fallback Retrieval Workflow:** Implements a production-style retrieval cascade — `reranked → hybrid` — with exception handling to ensure results are returned under degraded conditions.
-- **Vision-Based Verification:** Retrieved images are passed to **GPT-4o-mini Vision**, which assigns an `audit_score` (0–10) and `audit_verdict` (match / weak_match / reject). Final ranking uses a blended score of `0.7 × rerank_score + 0.3 × audit_score`. Rejected results are filtered before display.
-- **Few-Shot Grounded RAG:** Uses a **LangChain PromptTemplate with few-shot examples** to generate scene explanations using retrieved captions as grounded evidence.
-- **Evaluation Framework:** Automated evaluation over 300 COCO 2017 queries computing **Recall@K, Precision@K, MRR, nDCG@K, and median latency** across all pipeline stages.
-- **Interactive Chainlit Demo:** Deployed as a standalone Chainlit application with artifact-based serving — loads pre-exported embeddings and metadata from disk and returns ranked, audited results with captions, scores, and audit verdicts interactively.
-
----
-## Architecture
-
-![Architecture](images/agent.png)
-
----
-## Demo
-
-[![▶️ Watch the demo]](images/test.mp4)
+The retrieval pipeline is evaluated on the **COCO 2017** validation set using standard information retrieval metrics including **Recall@K, Precision@K, MRR, nDCG, and latency**.
 
 ---
 
+## Technology Stack
 
+**Deep Learning**
+- PyTorch
+- OpenCLIP (ViT-L-14)
+- SentenceTransformers
 
+**Retrieval**
+- ChromaDB
+- BM25
+- NumPy
 
+**LLM**
+- GPT-4o-mini Vision
+- LangChain
+
+**Application**
+- Chainlit
 
 ---
-## Results
 
-| Stage | Recall@1 | Recall@5 | MRR | nDCG@5 |
-|---|---|---|---|---|
-| Plain dense | 0.37 | 0.65 | 0.47 | 0.52 |
-| Cached / ChromaDB | 0.36 | 0.64 | 0.47 | 0.51 |
-| Hybrid (CLIP + BM25) | 0.80 | 0.92 | 0.85 | 0.86 |
-| Hybrid + reranked | **0.96** | **0.98** | **0.97** | **0.97** |
+# Project Pipeline
 
-Hybrid reranking achieves **~2.6× improvement in Recall@1** over the plain
+The system improves retrieval quality through a sequence of retrieval and ranking stages.
+
+1. Encode text and images into a shared embedding space using OpenCLIP.
+2. Retrieve candidate images using semantic vector search and lexical BM25 search.
+3. Re-rank retrieved candidates with a cross-encoder.
+4. Verify retrieved images using GPT-4o-mini Vision.
+5. Generate grounded scene explanations from retrieved visual evidence.
+
+---
+
+# Architecture
+
+<p align="center">
+<img src="images/agent.png" width="700">
+</p>
+
+---
+
+# Key Components
+
+## Multimodal Embedding
+
+- Encodes images and captions into a shared embedding space using OpenCLIP.
+- Stores image embeddings in ChromaDB for persistent vector search.
+
+---
+
+## Hybrid Retrieval
+
+Combines complementary retrieval strategies:
+
+- Semantic retrieval using OpenCLIP embeddings
+- Lexical retrieval using BM25
+- Weighted score fusion
+- Retrieval fallback strategy for robust inference
+
+---
+
+## Cross-Encoder Re-ranking
+
+Refines the initial candidate set using a SentenceTransformers cross-encoder to improve ranking quality before downstream reasoning.
+
+---
+
+## Image Verification
+
+Uses GPT-4o-mini Vision to verify whether retrieved images support the user query.
+
+Each retrieved image receives:
+
+- relevance score
+- verification verdict
+- explanation
+
+Low-confidence matches are filtered before response generation.
+
+---
+
+## Grounded Scene Explanation
+
+Retrieved captions are formatted as evidence using LangChain prompt templates before generating scene descriptions.
+
+This constrains the LLM to retrieved context instead of relying solely on parametric knowledge.
+
+---
+
+## Interactive Demo
+
+The project includes a Chainlit interface supporting
+
+- text-to-image retrieval
+- image-to-image retrieval
+- grounded scene explanation
+- retrieval score visualization
+- image verification
+
+<p align="center">
+
+[▶ Watch Demo](images/test.mp4)
+
+</p>
+
+---
+
+# Experimental Results
+
+| Method | Recall@1 | Recall@5 | MRR | nDCG@5 |
+|--------|---------:|---------:|----:|-------:|
+| Dense Retrieval | 0.37 | 0.65 | 0.47 | 0.52 |
+| ChromaDB Retrieval | 0.36 | 0.64 | 0.47 | 0.51 |
+| Hybrid Retrieval | 0.80 | 0.92 | 0.85 | 0.86 |
+| Hybrid + Cross-Encoder | **0.96** | **0.98** | **0.97** | **0.97** |
+
+The staged retrieval pipeline improves **Recall@1 by approximately 2.6×** compared with dense retrieval while maintaining high retrieval precision.
+
+---
+
